@@ -11,7 +11,20 @@ export class HelloCdkStack extends cdk.Stack {
     // Create a VPC
     const vpc = new ec2.Vpc(this, 'HelloVpc', {
       maxAzs: 2,
-      natGateways: 1,
+      natGateways: 0,
+    });
+
+    // Create the "internal doors" to ECR
+    vpc.addInterfaceEndpoint('ECREndpoint', {
+      service: ec2.InterfaceVpcEndpointAwsService.ECR
+    });
+
+    vpc.addInterfaceEndpoint('ECRDockerEndpoint', {
+      service: ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER
+    });
+
+    vpc.addGatewayEndpoint('S3Endpoint', {
+      service: ec2.GatewayVpcEndpointAwsService.S3
     });
 
     // Create a cluster
