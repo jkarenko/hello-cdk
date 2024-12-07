@@ -71,17 +71,13 @@ export class HelloCdkStack extends cdk.Stack {
       securityGroups: [endpointSecurityGroup],
     });
 
-    vpc.addGatewayEndpoint('S3Endpoint', {
-      service: ec2.GatewayVpcEndpointAwsService.S3,
-    });
-
-    vpc.addInterfaceEndpoint('CloudFormationEndpoint', {
-      service: ec2.InterfaceVpcEndpointAwsService.CLOUDFORMATION,
+    vpc.addInterfaceEndpoint('ElasticLoadBalancingEndpoint', {
+      service: ec2.InterfaceVpcEndpointAwsService.ELASTIC_LOAD_BALANCING,
       securityGroups: [endpointSecurityGroup],
     });
 
-    vpc.addInterfaceEndpoint('ElasticLoadBalancingEndpoint', {
-      service: ec2.InterfaceVpcEndpointAwsService.ELASTIC_LOAD_BALANCING,
+    vpc.addInterfaceEndpoint('CloudWatchLogsEndpoint', {
+      service: ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
       securityGroups: [endpointSecurityGroup],
     });
 
