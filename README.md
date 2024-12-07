@@ -254,7 +254,13 @@ Each version of the stack configuration is managed on separate branches:
 
 Ensure your AWS account has the appropriate permissions and that AWS CDK is configured correctly. Refer to the [AWS CDK documentation](https://docs.aws.amazon.com/cdk/latest/guide/work-with-cdk.html) for more details.
 
-
+1. **Access the Microservice**:
+   - After deployment, the CDK CLI will output the URL of the ALB. Access the microservice using this URL.
+   - For either version, you can test the `/hello` endpoint with the following command:
+     ```bash
+     curl 'http://<ALB DNS>/hello?name=my%20beautiful%20friend'
+     ```
+     
 ---
 
 For more details on each version, refer to the respective `lib/hello-cdk-stack.ts` file in the branch.
