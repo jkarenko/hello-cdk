@@ -131,11 +131,17 @@ export class HelloCdkStack extends cdk.Stack {
       scaleOutCooldown: cdk.Duration.seconds(60),
     });
 
-    // Flow logs
-    const flowLogGroup = new logs.LogGroup(this, 'VPCFlowLogs', {
-      logGroupName: '/vpc/flow-logs/HelloCdkStack',
-      retention: logs.RetentionDays.ONE_MONTH,
-    });
+    // Flow logs with existing log group check
+    const existingLogGroupName = '/vpc/flow-logs/HelloCdkStack';
+    let flowLogGroup;
+    try {
+      flowLogGroup = logs.LogGroup.fromLogGroupName(this, 'ExistingVPCFlowLogs', existingLogGroupName);
+    } catch {
+      flowLogGroup = new logs.LogGroup(this, 'VPCFlowLogs', {
+        logGroupName: existingLogGroupName,
+        retention: logs.RetentionDays.ONE_MONTH,
+      });
+    }
 
     new ec2.FlowLog(this, 'FlowLog', {
       resourceType: ec2.FlowLogResourceType.fromVpc(vpc),
