@@ -15,25 +15,18 @@ export class HelloCdkStack extends cdk.Stack {
       natGateways: 0,
     });
 
-    // Security group for VPC Endpoints
-    const endpointSecurityGroup = new ec2.SecurityGroup(this, 'EndpointSecurityGroup', {
-      vpc,
-      description: 'Security group for VPC Endpoints',
-      allowAllOutbound: true,
-    });
-
-    endpointSecurityGroup.addIngressRule(
-      ec2.Peer.ipv4(vpc.vpcCidrBlock),
-      ec2.Port.tcp(443),
-      'Allow HTTPS traffic from within VPC'
-    );
-
     // Security group for Fargate tasks
     const fargateSecurityGroup = new ec2.SecurityGroup(this, 'FargateServiceSG', {
       vpc,
       description: 'Security group for Fargate tasks',
       allowAllOutbound: true,
     });
+
+    fargateSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.allTraffic(),
+      'Allow outbound traffic to the internet'
+    );
 
     // Security group for ALB
     const albSecurityGroup = new ec2.SecurityGroup(this, 'AlbSecurityGroup', {
@@ -60,27 +53,6 @@ export class HelloCdkStack extends cdk.Stack {
       'Allow traffic from ALB to Fargate tasks'
     );
 
-    // Add VPC Endpoints
-    vpc.addInterfaceEndpoint('ECREndpoint', {
-      service: ec2.InterfaceVpcEndpointAwsService.ECR,
-      securityGroups: [endpointSecurityGroup],
-    });
-
-    vpc.addInterfaceEndpoint('ECRDockerEndpoint', {
-      service: ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER,
-      securityGroups: [endpointSecurityGroup],
-    });
-
-    vpc.addInterfaceEndpoint('ElasticLoadBalancingEndpoint', {
-      service: ec2.InterfaceVpcEndpointAwsService.ELASTIC_LOAD_BALANCING,
-      securityGroups: [endpointSecurityGroup],
-    });
-
-    vpc.addInterfaceEndpoint('CloudWatchLogsEndpoint', {
-      service: ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
-      securityGroups: [endpointSecurityGroup],
-    });
-
     // ECS Cluster
     const cluster = new ecs.Cluster(this, 'HelloCluster', {
       vpc,
@@ -100,7 +72,7 @@ export class HelloCdkStack extends cdk.Stack {
           NODE_ENV: 'production',
         },
       },
-      assignPublicIp: false,
+      assignPublicIp: true,
       securityGroups: [fargateSecurityGroup],
     });
 
