@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+BRANCHES=("main" "public-access")
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+if [[ " ${BRANCHES[@]} " =~ " ${CURRENT_BRANCH} " ]]; then
+    for BRANCH in "${BRANCHES[@]}"; do
+        if [[ "$BRANCH" != "$CURRENT_BRANCH" ]]; then
+            git checkout $BRANCH
+            git checkout $CURRENT_BRANCH -- README.md
+            git commit -m "Sync README.md from $CURRENT_BRANCH"
+            git checkout $CURRENT_BRANCH
+        fi
+    done
+fi
