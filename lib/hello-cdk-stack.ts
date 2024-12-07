@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecs_patterns from 'aws-cdk-lib/aws-ecs-patterns';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 
 export class HelloCdkStack extends cdk.Stack {
@@ -14,26 +15,83 @@ export class HelloCdkStack extends cdk.Stack {
       natGateways: 0,
     });
 
-    // Create the "internal doors" to ECR
+    // Security group for VPC Endpoints
+    const endpointSecurityGroup = new ec2.SecurityGroup(this, 'EndpointSecurityGroup', {
+      vpc,
+      description: 'Security group for VPC Endpoints',
+      allowAllOutbound: true,
+    });
+
+    endpointSecurityGroup.addIngressRule(
+      ec2.Peer.ipv4(vpc.vpcCidrBlock),
+      ec2.Port.tcp(443),
+      'Allow HTTPS traffic from within VPC'
+    );
+
+    // Security group for Fargate tasks
+    const fargateSecurityGroup = new ec2.SecurityGroup(this, 'FargateServiceSG', {
+      vpc,
+      description: 'Security group for Fargate tasks',
+      allowAllOutbound: true,
+    });
+
+    // Security group for ALB
+    const albSecurityGroup = new ec2.SecurityGroup(this, 'AlbSecurityGroup', {
+      vpc,
+      description: 'Security group for Application Load Balancer',
+      allowAllOutbound: true,
+    });
+
+    albSecurityGroup.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(80),
+      'Allow HTTP traffic from the internet'
+    );
+
+    albSecurityGroup.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(443),
+      'Allow HTTPS traffic from the internet'
+    );
+
+    fargateSecurityGroup.addIngressRule(
+      ec2.Peer.securityGroupId(albSecurityGroup.securityGroupId),
+      ec2.Port.tcp(8080),
+      'Allow traffic from ALB to Fargate tasks'
+    );
+
+    // Add VPC Endpoints
     vpc.addInterfaceEndpoint('ECREndpoint', {
-      service: ec2.InterfaceVpcEndpointAwsService.ECR
+      service: ec2.InterfaceVpcEndpointAwsService.ECR,
+      securityGroups: [endpointSecurityGroup],
     });
 
     vpc.addInterfaceEndpoint('ECRDockerEndpoint', {
-      service: ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER
+      service: ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER,
+      securityGroups: [endpointSecurityGroup],
     });
 
     vpc.addGatewayEndpoint('S3Endpoint', {
-      service: ec2.GatewayVpcEndpointAwsService.S3
+      service: ec2.GatewayVpcEndpointAwsService.S3,
     });
 
-    // Create a cluster
+    vpc.addInterfaceEndpoint('CloudFormationEndpoint', {
+      service: ec2.InterfaceVpcEndpointAwsService.CLOUDFORMATION,
+      securityGroups: [endpointSecurityGroup],
+    });
+
+    vpc.addInterfaceEndpoint('ElasticLoadBalancingEndpoint', {
+      service: ec2.InterfaceVpcEndpointAwsService.ELASTIC_LOAD_BALANCING,
+      securityGroups: [endpointSecurityGroup],
+    });
+
+    // ECS Cluster
     const cluster = new ecs.Cluster(this, 'HelloCluster', {
       vpc,
       containerInsights: true,
     });
 
-    // Create a load-balanced Fargate service
+    // Fargate Service with ALB
     const service = new ecs_patterns.ApplicationLoadBalancedFargateService(this, 'HelloService', {
       cluster,
       memoryLimitMiB: 512,
@@ -47,10 +105,13 @@ export class HelloCdkStack extends cdk.Stack {
         },
       },
       assignPublicIp: false,
-      healthCheckGracePeriod: cdk.Duration.seconds(5),
+      securityGroups: [fargateSecurityGroup],
     });
 
-    // Configure health check to use our /health endpoint
+    // Attach ALB security group
+    service.loadBalancer.addSecurityGroup(albSecurityGroup);
+
+    // Health check configuration
     service.targetGroup.configureHealthCheck({
       path: '/health',
       healthyHttpCodes: '200',
@@ -58,28 +119,43 @@ export class HelloCdkStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(5),
     });
 
-    // Create a scaling policy
+    // Autoscaling
     const scaling = service.service.autoScaleTaskCount({
       minCapacity: 1,
       maxCapacity: 2,
     });
 
-    // Scale on CPU utilization
     scaling.scaleOnCpuUtilization('CpuScaling', {
       targetUtilizationPercent: 70,
       scaleInCooldown: cdk.Duration.seconds(60),
       scaleOutCooldown: cdk.Duration.seconds(60),
     });
 
+    // Flow logs
+    const flowLogGroup = new logs.LogGroup(this, 'VPCFlowLogs', {
+      logGroupName: '/vpc/flow-logs/HelloCdkStack',
+      retention: logs.RetentionDays.ONE_MONTH,
+    });
+
+    new ec2.FlowLog(this, 'FlowLog', {
+      resourceType: ec2.FlowLogResourceType.fromVpc(vpc),
+      destination: ec2.FlowLogDestination.toCloudWatchLogs(flowLogGroup),
+    });
+
     // Outputs
     new cdk.CfnOutput(this, 'LoadBalancerDNS', {
       value: service.loadBalancer.loadBalancerDnsName,
-      description: 'Load balancer DNS name',
+      description: 'Load Balancer DNS name',
     });
 
-    new cdk.CfnOutput(this, 'ServiceURL', {
-      value: `http://${service.loadBalancer.loadBalancerDnsName}/hello`,
-      description: 'Hello endpoint URL',
+    new cdk.CfnOutput(this, 'FargateSecurityGroupId', {
+      value: fargateSecurityGroup.securityGroupId,
+      description: 'Fargate Security Group ID',
+    });
+
+    new cdk.CfnOutput(this, 'VpcId', {
+      value: vpc.vpcId,
+      description: 'VPC ID',
     });
   }
 }
