@@ -159,5 +159,11 @@ export class HelloCdkStack extends cdk.Stack {
       value: vpc.vpcId,
       description: 'VPC ID',
     });
+
+    // Output for testing the /hello endpoint with curl
+    new cdk.CfnOutput(this, 'HelloEndpoint', {
+      value: `curl 'http://${service.loadBalancer.loadBalancerDnsName}/hello?name=my%20beautiful%20friend'`,
+      description: 'Hello Endpoint',
+    });
   }
 }
