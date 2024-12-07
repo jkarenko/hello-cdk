@@ -8,7 +8,17 @@ if [[ " ${BRANCHES[@]} " =~ " ${CURRENT_BRANCH} " ]]; then
         if [[ "$BRANCH" != "$CURRENT_BRANCH" ]]; then
             git checkout $BRANCH
             git checkout $CURRENT_BRANCH -- README.md
-            git commit -m "Sync README.md from $CURRENT_BRANCH"
+
+            # Check if the previous commit message contains "Sync README.md from"
+            LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
+            if [[ "$LAST_COMMIT_MSG" == *"Sync README.md from"* ]]; then
+                # Amend the previous commit to avoid spamming the commit history
+                git commit --amend --no-edit
+            else
+                # Create a new commit
+                git commit -m "Sync README.md from $CURRENT_BRANCH"
+            fi
+
             git checkout $CURRENT_BRANCH
         fi
     done
