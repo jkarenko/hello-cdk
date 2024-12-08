@@ -20,97 +20,120 @@ See [AWS PrivateLink Pricing](https://aws.amazon.com/privatelink/pricing/) for d
 
 #### Diagram
 ```mermaid
+%%{init: {'theme': 'base', 'flowchart': {'curve': 'basis', 'htmlLabels': true, 'nodeSpacing': 20, 'rankSpacing': 50, 'edgeStyle': 'thick', 'diagramPadding': 8}, 'themeVariables': { 'fontFamily': 'arial'}}}%%
+
 flowchart TB
-    INTERNET((Internet)) -->|HTTP/HTTPS| ALB
-    
-    subgraph VPC["VPC (2 AZs, No NAT)"]
-        direction TB
-        style VPC fill:#F2F3F4,stroke:#232F3E,stroke-width:2px
+    subgraph STACK["HelloCDKStack with VPC Endpoints"]
+        style STACK fill:#DDD,stroke:#232F3E,stroke-width:3px
         
-        subgraph PublicSubnets["Public Subnets"]
-            direction LR
-            style PublicSubnets fill:#FF9900,stroke:#232F3E
-            ALB[Application Load Balancer]
-        end
-
-        subgraph PrivateSubnets["Private Subnets"]
-            direction LR
-            style PrivateSubnets fill:#FF9900,stroke:#232F3E
+        subgraph VPC["VPC (2 AZs, No NAT)"]
+            direction TB
             
-            subgraph ECS["ECS Cluster"]
+            subgraph PUBLICSUBNETS["Public Subnets"]
                 direction LR
-                style ECS fill:#EC7211,stroke:#232F3E
-                
-                subgraph TASK1["Fargate Task"]
-                    style TASK1 fill:#EC7211,stroke:#232F3E
-                    subgraph CONTAINER1["Go Container"]
-                        style CONTAINER1 fill:#00A4A6,stroke:#232F3E
-                        APP1[Go Application<br/>Port: 8080]
-                    end
-                end
-                
-                subgraph TASK2["Fargate Task (Auto-scaled)"]
-                    style TASK2 fill:#EC7211,stroke:#232F3E
-                    subgraph CONTAINER2["Go Container"]
-                        style CONTAINER2 fill:#00A4A6,stroke:#232F3E
-                        APP2[Go Application<br/>Port: 8080]
-                    end
-                end
-                
-                FARGATE[Fargate Service<br/>CPU: 256, Memory: 512MB]
+                ALB[Application Load Balancer]
             end
 
-            subgraph Endpoints["VPC Endpoints"]
+            subgraph PRIVATESUBNETS["Private Subnets"]
                 direction LR
-                style Endpoints fill:#FF9900,stroke:#232F3E
                 
-                ECR[ECR API Endpoint]
-                ECRDOCKER[ECR Docker Endpoint]
-                ELB[ELB Endpoint]
-                CWLOGS[CloudWatch Logs Endpoint]
+                subgraph ECS["ECS Cluster"]
+                    direction LR
+                    
+                    subgraph TASK1["Fargate Task"]
+                        subgraph DOCKER1["Docker Container"]
+                            subgraph HELLOAPP1["Go Application"]
+                                APP1[":8080/hello"]
+                            end
+                        end
+                    end
+                    
+                    subgraph TASK2["Fargate Task (Auto-scaled)"]
+                        subgraph DOCKER2["Docker Container"]
+                            subgraph HELLOAPP2["Go Application"]
+                                APP2[":8080/hello"]
+                            end
+                        end
+                    end
+                    
+                    FARGATE[Fargate Service<br/>CPU: 256, Memory: 512MB]
+                end
+
+                subgraph ENDPOINTS["VPC Endpoints"]
+                    direction LR
+                    
+                    ECR[ECR API Endpoint]
+                    ECRDOCKER[ECR Docker Endpoint]
+                    ELB[ELB Endpoint]
+                    CWLOGS[CloudWatch Logs Endpoint]
+                end
             end
+            
+            SG_ALB[Security Group ALB<br/>Inbound: 80,443]
+            SG_FARGATE[Security Group Fargate<br/>Inbound: 8080]
+            SG_ENDPOINT[Security Group Endpoints<br/>Inbound: 443]
+            
+            FLOWLOG[VPC Flow Logs]
         end
         
-        SG_ALB[Security Group ALB<br/>Inbound: 80,443]
-        SG_FARGATE[Security Group Fargate<br/>Inbound: 8080]
-        SG_ENDPOINT[Security Group Endpoints<br/>Inbound: 443]
+        subgraph CLOUDWATCH["CloudWatch"]
+            LOGS[Flow Logs Group]
+        end
         
-        FLOWLOG[VPC Flow Logs]
-    end
-    
-    subgraph CloudWatch["CloudWatch"]
-        style CloudWatch fill:#205B99,stroke:#232F3E
-        LOGS[Flow Logs Group]
-    end
-    
-    ALB -->|Port 8080| APP1
-    ALB -->|Port 8080| APP2
-    TASK1 --- FARGATE
-    TASK2 --- FARGATE
-    
-    %% VPC Endpoint connections with correct relationships
-    FARGATE -.->|Pull Images| ECR
-    FARGATE -.->|Pull Images| ECRDOCKER
-    FARGATE -.->|Health Checks| ELB
-    FARGATE -.->|Container Logs| CWLOGS
-    
-    SG_ALB -.->|Protects| ALB
-    SG_FARGATE -.->|Protects| TASK1
-    SG_FARGATE -.->|Protects| TASK2
-    SG_ENDPOINT -.->|Protects| Endpoints
-    
-    FLOWLOG -->|Logs| LOGS
+        INTERNET((Internet)) -->|HTTP/HTTPS| ALB
 
-    %% AWS Service styling
-    classDef sg fill:#E7157B,stroke:#232F3E
-    classDef flowlogs fill:#205B99,stroke:#232F3E
-    classDef internet fill:#232F3E,stroke:#232F3E,color:#ffffff
-    classDef endpoint fill:#E7157B,stroke:#232F3E
+        ALB -->|Port 8080| APP1
+        ALB -->|Port 8080| APP2
+        TASK1 --> FARGATE
+        TASK2 --> FARGATE
+        
+        %% VPC Endpoint connections
+        FARGATE -->|Pull Images| ECR
+        FARGATE -->|Pull Images| ECRDOCKER
+        FARGATE -->|Health Checks| ELB
+        FARGATE -->|Container Logs| CWLOGS
+        
+        SG_ALB -.->|Protects| ALB
+        SG_FARGATE -.->|Protects| TASK1
+        SG_FARGATE -.->|Protects| TASK2
+        SG_ENDPOINT -.->|Protects| Endpoints
+        
+        FLOWLOG -->|Logs| LOGS
 
-    class SG_ALB,SG_FARGATE,SG_ENDPOINT sg
-    class FLOWLOG,LOGS flowlogs
-    class INTERNET internet
-    class ECR,ECRDOCKER,ELB,CWLOGS endpoint
+        %% AWS Service styling
+        classDef stack fill:#DDD,stroke:#232F3E,stroke-width:3px
+        classDef publicsubnets fill:#BA7FFF,stroke:#232F3E,stroke-width:2px
+        classDef privatesubnets fill:#BA7FFF,stroke:#232F3E,stroke-width:2px
+        classDef sg fill:#E7157B,stroke:#232F3E,color:white
+        classDef flowlogs fill:#205B99,stroke:#232F3E,color:white
+        classDef internet fill:#232F3E,stroke:#232F3E,color:#ffffff
+        classDef endpoint fill:#BA7FFF,stroke:#232F3E,color:white
+        classDef endpoints fill:#9A6BC5,stroke:#232F3E,color:white
+        classDef cloudwatch fill:#205B99,stroke:#232F3E,color:white
+        classDef flowlogs fill:#205B99,stroke:#232F3E,color:white
+        classDef docker fill:#0db7ed,stroke:#384d54,color:black
+        classDef goapp fill:#00A29C,stroke:#232F3E,color:black
+        classDef app fill:#00A29C,stroke:#232F3E,color:black
+        classDef vpc fill:#BA7FFF,stroke:#232F3E,stroke-width:3px
+        classDef ecs fill:#EC7211,stroke:#232F3E,stroke-width:2px
+        classDef fargate fill:#EC7211,stroke:#232F3E,stroke-width:2px
+        classDef cloudwatch fill:#205B99,stroke:#232F3E
+
+        class STACK stack
+        class PUBLICSUBNETS publicsubnets
+        class PRIVATESUBNETS privatesubnets
+        class SG_ALB,SG_FARGATE,SG_ENDPOINT sg
+        class FLOWLOG,LOGS flowlogs
+        class CLOUDWATCH cloudwatch
+        class DOCKER1,DOCKER2 docker
+        class HELLOAPP1,HELLOAPP2 goapp
+        class APP1,APP2 app
+        class INTERNET internet
+        class ECS ecs
+        class ECR,ECRDOCKER,ELB,CWLOGS endpoint
+        class ENDPOINTS endpoints
+        class TASK1,TASK2 fargate
+    end
 ```
 
 ### **2. Public Access Version**
@@ -126,69 +149,96 @@ See [AWS Data Transfer Pricing](https://aws.amazon.com/blogs/architecture/overvi
 
 #### Diagram
 ```mermaid
+%%{init: {'theme': 'base', 'flowchart': {'curve': 'basis', 'htmlLabels': true, 'nodeSpacing': 20, 'rankSpacing': 50, 'edgeStyle': 'thick', 'diagramPadding': 8}, 'themeVariables': { 'fontFamily': 'arial'}}}%%
+
 graph TB
-    
-    subgraph VPC["VPC (2 AZs, No NAT)"]
-        style VPC fill:#F2F3F4,stroke:#232F3E,stroke-width:2px
-        
-        subgraph PublicSubnets["Public Subnets"]
-            style PublicSubnets fill:#FF9900,stroke:#232F3E
-            ALB[Application Load Balancer]
-            
-            subgraph ECS["ECS Cluster"]
-                style ECS fill:#EC7211,stroke:#232F3E
-                
-                subgraph TASK1["Fargate Task"]
-                    style TASK1 fill:#EC7211,stroke:#232F3E
-                    subgraph CONTAINER1["Go Container"]
-                        style CONTAINER1 fill:#00A4A6,stroke:#232F3E
-                        APP1[Go Application<br/>Port: 8080<br/>/hello endpoint]
+
+    subgraph STACK["HelloCDKStack"]
+        style STACK fill:#DDD
+
+        subgraph VPC["VPC (2 AZs, No NAT)"]
+
+            subgraph PUBLICSUBNETS["Public Subnets"]
+                ALB[Application Load Balancer]
+
+                subgraph ECS["ECS Cluster"]
+
+                    subgraph TASK1["Fargate Task"]
+                        subgraph DOCKER1["Docker Container"]
+                            subgraph HELLOAPP1["Go Application"]
+                                APP1[8080:/hello]
+                            end
+                        end
                     end
-                end
-                
-                subgraph TASK2["Fargate Task (Auto-scaled)"]
-                    style TASK2 fill:#EC7211,stroke:#232F3E
-                    subgraph CONTAINER2["Go Container"]
-                        style CONTAINER2 fill:#00A4A6,stroke:#232F3E
-                        APP2[Go Application<br/>Port: 8080<br/>/hello endpoint]
+
+                    subgraph TASK2["Fargate Task (Auto-scaled)"]
+                        subgraph DOCKER2["Docker Container"]
+                            subgraph HELLOAPP2["Go Application"]
+                                APP2[8080:/hello]
+                            end
+                        end
                     end
+
+                    FARGATE[Fargate Service<br/>CPU: 256<br/>Memory: 512MB]
                 end
-                
-                FARGATE[Fargate Service<br/>CPU: 256<br/>Memory: 512MB]
             end
+
+            SG_ALB[Security Group ALB<br/>Inbound: 80,443]
+            SG_FARGATE[Security Group Fargate<br/>Inbound: 8080]
+
+            FLOWLOG[VPC Flow Logs]
         end
-        
-        SG_ALB[Security Group ALB<br/>Inbound: 80,443]
-        SG_FARGATE[Security Group Fargate<br/>Inbound: 8080]
-        
-        FLOWLOG[VPC Flow Logs]
-    end
-    
-    subgraph CloudWatch["CloudWatch"]
-        style CloudWatch fill:#205B99,stroke:#232F3E
-        LOGS[Flow Logs Group<br/>/vpc/flow-logs/HelloCdkStack]
-    end
-    
-    INTERNET((Internet)) -->|HTTP/HTTPS| ALB
-    ALB -->|Port 8080| APP1
-    ALB -->|Port 8080| APP2
-    TASK1 --- FARGATE
-    TASK2 --- FARGATE
-    
-    SG_ALB -.->|Protects| ALB
-    SG_FARGATE -.->|Protects| TASK1
-    SG_FARGATE -.->|Protects| TASK2
-    
-    FLOWLOG -->|Logs| LOGS
 
-    %% AWS Service styling
-    classDef sg fill:#E7157B,stroke:#232F3E
-    classDef flowlogs fill:#205B99,stroke:#232F3E
-    classDef internet fill:#232F3E,stroke:#232F3E,color:#ffffff
+        subgraph CLOUDWATCH["CloudWatch"]
+            LOGS[Flow Logs Group<br/>/vpc/flow-logs/HelloCdkStack]
+        end
 
-    class SG_ALB,SG_FARGATE sg
-    class FLOWLOG,LOGS flowlogs
-    class INTERNET internet
+        INTERNET((Internet)) -->|HTTP/HTTPS| ALB
+        ALB -->|Port 8080| APP1
+        ALB -->|Port 8080| APP2
+        TASK1 --- FARGATE
+        TASK2 --- FARGATE
+
+        SG_ALB -.->|Protects| ALB
+        SG_FARGATE -.->|Protects| TASK1
+        SG_FARGATE -.->|Protects| TASK2
+
+        FLOWLOG -->|Logs| LOGS
+
+        classDef stack fill:#DDD,stroke:#232F3E,stroke-width:3px
+        classDef publicsubnets fill:#BA7FFF,stroke:#232F3E,stroke-width:2px
+        classDef privatesubnets fill:#BA7FFF,stroke:#232F3E,stroke-width:2px
+        classDef sg fill:#E7157B,stroke:#232F3E,color:white
+        classDef flowlogs fill:#205B99,stroke:white,color:white
+        classDef internet fill:#232F3E,stroke:#232F3E,color:#ffffff
+        classDef endpoint fill:#BA7FFF,stroke:#232F3E,color:white
+        classDef endpoints fill:#9A6BC5,stroke:#232F3E,color:white
+        classDef cloudwatch fill:#205B99,stroke:white,color:white
+        classDef flowlogs fill:#205B99,stroke:white,color:white
+        classDef docker fill:#0db7ed,stroke:#384d54,color:black
+        classDef goapp fill:#00A29C,stroke:#232F3E,color:black
+        classDef app fill:#00A29C,stroke:#232F3E,color:black
+        classDef vpc fill:#BA7FFF,stroke:#232F3E,stroke-width:3px
+        classDef ecs fill:#EC7211,stroke:#232F3E,stroke-width:2px
+        classDef fargate fill:#EC7211,stroke:#232F3E,stroke-width:2px
+        classDef cloudwatch fill:#205B99,stroke:#232F3E
+
+        class STACK stack
+        class PUBLICSUBNETS publicsubnets
+        class PRIVATESUBNETS privatesubnets
+        class SG_ALB,SG_FARGATE,SG_ENDPOINT sg
+        class FLOWLOG,LOGS flowlogs
+        class CLOUDWATCH cloudwatch
+        class DOCKER1,DOCKER2 docker
+        class HELLOAPP1,HELLOAPP2 goapp
+        class APP1,APP2 app
+        class INTERNET internet
+        class ECS ecs
+        class ECR,ECRDOCKER,ELB,CWLOGS endpoint
+        class ENDPOINTS endpoints
+        class TASK1,TASK2 fargate
+    end
+
 ```
 
 ## File Structure
