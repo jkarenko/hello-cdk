@@ -77,7 +77,7 @@ flowchart TB
         end
         
         subgraph CLOUDWATCH["CloudWatch"]
-            LOGS[Flow Logs Group]
+            LOGS[Flow Logs Group<br/>/vpc/flow-logs/HelloCdkStack]
         end
         
         INTERNET((Internet)) -->|HTTP/HTTPS| ALB
