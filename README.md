@@ -77,7 +77,7 @@ flowchart TB
         end
         
         subgraph CLOUDWATCH["CloudWatch"]
-            LOGS[Flow Logs Group]
+            LOGS[Flow Logs Group<br/>/vpc/flow-logs/HelloCdkStack]
         end
         
         INTERNET((Internet)) -->|HTTP/HTTPS| ALB
@@ -105,12 +105,12 @@ flowchart TB
         classDef publicsubnets fill:#BA7FFF,stroke:#232F3E,stroke-width:2px
         classDef privatesubnets fill:#BA7FFF,stroke:#232F3E,stroke-width:2px
         classDef sg fill:#E7157B,stroke:#232F3E,color:white
-        classDef flowlogs fill:#205B99,stroke:#232F3E,color:white
+        classDef flowlogs fill:#205B99,stroke:white,color:white
         classDef internet fill:#232F3E,stroke:#232F3E,color:#ffffff
         classDef endpoint fill:#BA7FFF,stroke:#232F3E,color:white
         classDef endpoints fill:#9A6BC5,stroke:#232F3E,color:white
-        classDef cloudwatch fill:#205B99,stroke:#232F3E,color:white
-        classDef flowlogs fill:#205B99,stroke:#232F3E,color:white
+        classDef cloudwatch fill:#205B99,stroke:white,color:white
+        classDef flowlogs fill:#205B99,stroke:white,color:white
         classDef docker fill:#0db7ed,stroke:#384d54,color:black
         classDef goapp fill:#00A29C,stroke:#232F3E,color:black
         classDef app fill:#00A29C,stroke:#232F3E,color:black
