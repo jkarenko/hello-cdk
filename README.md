@@ -51,7 +51,7 @@ This stack is designed for use cases where the microservice needs to be highly a
 
 See [AWS PrivateLink Pricing](https://aws.amazon.com/privatelink/pricing/) for detailed costs:
 
-#### Diagram
+#### Diagram (VPC Endpoints Version)
 
 ```mermaid
 %%{init: {'theme': 'base', 'flowchart': {'curve': 'basis', 'htmlLabels': true, 'nodeSpacing': 20, 'rankSpacing': 50, 'edgeStyle': 'thick', 'diagramPadding': 8}, 'themeVariables': { 'fontFamily': 'arial'}}}%%
@@ -171,6 +171,7 @@ flowchart TB
 ```
 
 ### **2. Public Access Version**
+
 - **Description**:
   - Uses public internet access for all external communications.
   - Assigns public IPs to ECS tasks and routes traffic directly to external services without VPC endpoints.
@@ -181,7 +182,8 @@ flowchart TB
 
 See [AWS Data Transfer Pricing](https://aws.amazon.com/blogs/architecture/overview-of-data-transfer-costs-for-common-architectures/) for detailed costs.
 
-#### Diagram
+#### Diagram (Public Access Version)
+
 ```mermaid
 %%{init: {'theme': 'base', 'flowchart': {'curve': 'basis', 'htmlLabels': true, 'nodeSpacing': 20, 'rankSpacing': 50, 'edgeStyle': 'thick', 'diagramPadding': 8}, 'themeVariables': { 'fontFamily': 'arial'}}}%%
 
@@ -278,60 +280,76 @@ graph TB
 ## File Structure
 
 ### Root Directory
+
 The root directory contains microservice-related files:
+
 - **`Dockerfile`**: Used to containerize the microservice.
 - **`main.go`**: Entry point for the microservice.
 - Other configuration files: Refer to the [AWS CDK documentation](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping-env.html) for details on `cdk.json` and other CDK-related files.
 
 ### `lib` Directory
+
 The `lib` directory contains the main stack files for both versions:
+
 - **`hello-cdk-stack.ts`**: The CDK stack implementation.
 
 ## Deployment Instructions
+
 Each version of the stack configuration is managed on separate branches:
+
 - **`main` branch**: Contains the VPC Endpoints Version.
 - **`public-access` branch**: Contains the Public Access Version.
 
 ### Installing and Configuring AWS CDK
+
 1. **Install AWS CDK**:
    - Ensure Node.js (v16 or later) is installed.
    - Install the AWS CDK CLI globally:
+
      ```bash
      npm install -g aws-cdk
      ```
 
 2. **Install Project Dependencies**:
    - Run the following command to install necessary development dependencies for TypeScript and Node.js type definitions:
+
      ```bash
      npm install -D @types/node typescript
      ```
 
 3. **Bootstrap Your AWS Environment**:
    - If you haven’t already, bootstrap your AWS environment:
+
      ```bash
      cdk bootstrap
      ```
+
    - This step is required only once per AWS account and region. If your AWS CLI is already configured, this step will use your default credentials. Refer to the [AWS CDK documentation](https://docs.aws.amazon.com/cdk/latest/guide/bootstrapping.html) for more details.
 
 4. **Verify the Installation**:
    - Confirm the CDK CLI is installed:
+
      ```bash
      cdk --version
      ```
 
 ### Steps to Deploy
+
 1. Check out the branch for the desired version:
+
    ```bash
    git checkout main           # For VPC Endpoints Version
    git checkout public-access  # For Public Access Version
    ```
 
 2. Ensure all necessary dependencies are installed:
+
    ```bash
    npm install
    ```
 
 3. Deploy the stack using AWS CDK:
+
    ```bash
    cdk deploy
    ```
@@ -341,10 +359,11 @@ Ensure your AWS account has the appropriate permissions and that AWS CDK is conf
 1. **Access the Microservice**:
    - After deployment, the CDK CLI will output the URL of the ALB. Access the microservice using this URL.
    - For either version, you can test the `/hello` endpoint with the following command:
+
      ```bash
      curl 'http://<ALB DNS>/hello?name=my%20beautiful%20friend'
      ```
-     
+
 ---
 
 ## Future Work
