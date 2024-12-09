@@ -2,9 +2,33 @@
 
 This repository contains two versions of the **Hello CDK Stack**, designed for different networking configurations and use cases.
 
+## The Stack
+
+The **Hello CDK Stack** is a simple AWS Cloud Development Kit (CDK) stack that deploys a Go microservice using AWS Fargate and an Application Load Balancer (ALB). The microservice responds to HTTP requests at the `/hello` endpoint with a greeting message, or a personalized message if a `name` query parameter is provided (e.g., `/hello?name=Tim%20the%20Enchanter`).
+
+## Use Cases
+
+This stack is designed for use cases where the microservice needs to be highly available and scalable, while also requiring strict security and private communication with AWS services.
+
+### Features
+
+#### Components
+
+- **AWS Fargate**: Runs the Go microservice in a containerized environment without managing the underlying infrastructure.
+- **Application Load Balancer (ALB)**: Routes incoming HTTP requests to the Fargate tasks.
+- **VPC Endpoints**: Secure, private communication with AWS services (e.g., ECR, CloudWatch Logs) within the VPC.
+- **VPC Flow Logs**: Captures network traffic data for analysis and troubleshooting.
+
+#### Availability and Scaling
+
+- **AZs**: 2 Availability Zones (AZs)
+- **NAT Gateways**: Not used in this project.
+- **Auto Scaling**: The ECS service scales the number of tasks based on the desired count.
+
 ## Versions
 
 ### **1. VPC Endpoints Version**
+
 - **Description**:
   - Utilizes VPC Interface Endpoints for secure, private communication with AWS services (e.g., ECR, CloudWatch Logs) within the VPC.
   - Keeps all network traffic within the AWS network backbone, enhancing security and reducing internet exposure.
@@ -19,6 +43,7 @@ This repository contains two versions of the **Hello CDK Stack**, designed for d
 See [AWS PrivateLink Pricing](https://aws.amazon.com/privatelink/pricing/) for detailed costs:
 
 #### Diagram
+
 ```mermaid
 %%{init: {'theme': 'base', 'flowchart': {'curve': 'basis', 'htmlLabels': true, 'nodeSpacing': 20, 'rankSpacing': 50, 'edgeStyle': 'thick', 'diagramPadding': 8}, 'themeVariables': { 'fontFamily': 'arial'}}}%%
 
@@ -312,5 +337,11 @@ Ensure your AWS account has the appropriate permissions and that AWS CDK is conf
      ```
      
 ---
+
+## Future Work
+
+- Consider hybrid networking configurations for specific use cases where both VPC Endpoints and NAT Gateways might be beneficial
+- Add a CI/CD pipeline to automate the deployment process.
+- Add a monitoring and alerting system to monitor the health and performance of the microservice.
 
 For more details on each version, refer to the respective `lib/hello-cdk-stack.ts` file in the branch.
