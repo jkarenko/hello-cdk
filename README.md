@@ -12,6 +12,15 @@ This stack is designed for use cases where the microservice needs to be highly a
 
 ### Features
 
+- **VPC Endpoints version**
+  - No internet access is required for the microservice, hence no NAT Gateways for the Fargate tasks.
+  - Tasks are deployed in private subnets.
+  - VPC Endpoints are used for secure, private communication with AWS services (e.g., ECR, CloudWatch Logs) within the VPC.
+
+- **Public Access version** (caveat emptor: this is not recommended outside of just testing purposes)
+  - Tasks are deployed in public subnets.
+  - Public IPs are assigned to the tasks.
+
 #### Components
 
 - **AWS Fargate**: Runs the Go microservice in a containerized environment without managing the underlying infrastructure.
