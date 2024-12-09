@@ -2,9 +2,42 @@
 
 This repository contains two versions of the **Hello CDK Stack**, designed for different networking configurations and use cases.
 
+## The Stack
+
+The **Hello CDK Stack** is a simple AWS Cloud Development Kit (CDK) stack that deploys a Go microservice using AWS Fargate and an Application Load Balancer (ALB). The microservice responds to HTTP requests at the `/hello` endpoint with a greeting message, or a personalized message if a `name` query parameter is provided (e.g., `/hello?name=Tim%20the%20Enchanter`).
+
+## Use Cases
+
+This stack is designed for use cases where the microservice needs to be highly available and scalable, while also requiring strict security and private communication with AWS services.
+
+### Features
+
+- **VPC Endpoints version**
+  - No internet access is required for the microservice, hence no NAT Gateways for the Fargate tasks.
+  - Tasks are deployed in private subnets.
+  - VPC Endpoints are used for secure, private communication with AWS services (e.g., ECR, CloudWatch Logs) within the VPC.
+
+- **Public Access version** (caveat emptor: this is not recommended outside of just testing purposes)
+  - Tasks are deployed in public subnets.
+  - Public IPs are assigned to the tasks.
+
+#### Components
+
+- **AWS Fargate**: Runs the Go microservice in a containerized environment without managing the underlying infrastructure.
+- **Application Load Balancer (ALB)**: Routes incoming HTTP requests to the Fargate tasks.
+- **VPC Endpoints**: Secure, private communication with AWS services (e.g., ECR, CloudWatch Logs) within the VPC.
+- **VPC Flow Logs**: Captures network traffic data for analysis and troubleshooting.
+
+#### Availability and Scaling
+
+- **AZs**: 2 Availability Zones (AZs)
+- **NAT Gateways**: Not used in this project.
+- **Auto Scaling**: The ECS service scales the number of tasks based on the desired count.
+
 ## Versions
 
 ### **1. VPC Endpoints Version**
+
 - **Description**:
   - Utilizes VPC Interface Endpoints for secure, private communication with AWS services (e.g., ECR, CloudWatch Logs) within the VPC.
   - Keeps all network traffic within the AWS network backbone, enhancing security and reducing internet exposure.
@@ -18,7 +51,8 @@ This repository contains two versions of the **Hello CDK Stack**, designed for d
 
 See [AWS PrivateLink Pricing](https://aws.amazon.com/privatelink/pricing/) for detailed costs:
 
-#### Diagram
+#### Diagram (VPC Endpoints Version)
+
 ```mermaid
 %%{init: {'theme': 'base', 'flowchart': {'curve': 'basis', 'htmlLabels': true, 'nodeSpacing': 20, 'rankSpacing': 50, 'edgeStyle': 'thick', 'diagramPadding': 8}, 'themeVariables': { 'fontFamily': 'arial'}}}%%
 
@@ -137,6 +171,7 @@ flowchart TB
 ```
 
 ### **2. Public Access Version**
+
 - **Description**:
   - Uses public internet access for all external communications.
   - Assigns public IPs to ECS tasks and routes traffic directly to external services without VPC endpoints.
@@ -147,7 +182,8 @@ flowchart TB
 
 See [AWS Data Transfer Pricing](https://aws.amazon.com/blogs/architecture/overview-of-data-transfer-costs-for-common-architectures/) for detailed costs.
 
-#### Diagram
+#### Diagram (Public Access Version)
+
 ```mermaid
 %%{init: {'theme': 'base', 'flowchart': {'curve': 'basis', 'htmlLabels': true, 'nodeSpacing': 20, 'rankSpacing': 50, 'edgeStyle': 'thick', 'diagramPadding': 8}, 'themeVariables': { 'fontFamily': 'arial'}}}%%
 
@@ -244,60 +280,76 @@ graph TB
 ## File Structure
 
 ### Root Directory
+
 The root directory contains microservice-related files:
+
 - **`Dockerfile`**: Used to containerize the microservice.
 - **`main.go`**: Entry point for the microservice.
 - Other configuration files: Refer to the [AWS CDK documentation](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping-env.html) for details on `cdk.json` and other CDK-related files.
 
 ### `lib` Directory
+
 The `lib` directory contains the main stack files for both versions:
+
 - **`hello-cdk-stack.ts`**: The CDK stack implementation.
 
 ## Deployment Instructions
+
 Each version of the stack configuration is managed on separate branches:
+
 - **`main` branch**: Contains the VPC Endpoints Version.
 - **`public-access` branch**: Contains the Public Access Version.
 
 ### Installing and Configuring AWS CDK
+
 1. **Install AWS CDK**:
    - Ensure Node.js (v16 or later) is installed.
    - Install the AWS CDK CLI globally:
+
      ```bash
      npm install -g aws-cdk
      ```
 
 2. **Install Project Dependencies**:
    - Run the following command to install necessary development dependencies for TypeScript and Node.js type definitions:
+
      ```bash
      npm install -D @types/node typescript
      ```
 
 3. **Bootstrap Your AWS Environment**:
    - If you haven’t already, bootstrap your AWS environment:
+
      ```bash
      cdk bootstrap
      ```
+
    - This step is required only once per AWS account and region. If your AWS CLI is already configured, this step will use your default credentials. Refer to the [AWS CDK documentation](https://docs.aws.amazon.com/cdk/latest/guide/bootstrapping.html) for more details.
 
 4. **Verify the Installation**:
    - Confirm the CDK CLI is installed:
+
      ```bash
      cdk --version
      ```
 
 ### Steps to Deploy
+
 1. Check out the branch for the desired version:
+
    ```bash
    git checkout main           # For VPC Endpoints Version
    git checkout public-access  # For Public Access Version
    ```
 
 2. Ensure all necessary dependencies are installed:
+
    ```bash
    npm install
    ```
 
 3. Deploy the stack using AWS CDK:
+
    ```bash
    cdk deploy
    ```
@@ -307,10 +359,17 @@ Ensure your AWS account has the appropriate permissions and that AWS CDK is conf
 1. **Access the Microservice**:
    - After deployment, the CDK CLI will output the URL of the ALB. Access the microservice using this URL.
    - For either version, you can test the `/hello` endpoint with the following command:
+
      ```bash
      curl 'http://<ALB DNS>/hello?name=my%20beautiful%20friend'
      ```
-     
+
 ---
+
+## Future Work
+
+- Consider hybrid networking configurations for specific use cases where both VPC Endpoints and NAT Gateways might be beneficial
+- Add a CI/CD pipeline to automate the deployment process.
+- Add a monitoring and alerting system to monitor the health and performance of the microservice.
 
 For more details on each version, refer to the respective `lib/hello-cdk-stack.ts` file in the branch.
