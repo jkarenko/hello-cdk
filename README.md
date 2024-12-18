@@ -2,6 +2,8 @@
 
 This repository contains two versions of the **Hello CDK Stack**, designed for different networking configurations and use cases.
 
+There's also a GCP Cloud Run + Terraform version for the same Go service: [hello-terraform](https://github.com/jkarenko/hello-terraform)
+
 ## The Stack
 
 The **Hello CDK Stack** is a simple AWS Cloud Development Kit (CDK) stack that deploys a Go microservice using AWS Fargate and an Application Load Balancer (ALB). The microservice responds to HTTP requests at the `/hello` endpoint with a greeting message, or a personalized message if a `name` query parameter is provided (e.g., `/hello?name=Tim%20the%20Enchanter`).
